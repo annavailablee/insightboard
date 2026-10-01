@@ -4,6 +4,7 @@ from src.interpreter import interpret
 from src.executor import execute
 from src.explainer import explain
 from src.visualizer import visualize
+from src.schema import profile
 
 st.set_page_config(
     page_title="InsightBoard",
@@ -57,6 +58,11 @@ with st.sidebar:
     st.success(f"Loaded: {uploaded_file.name}")
     st.metric("Rows", f"{df.shape[0]:,}")
     st.metric("Columns", f"{df.shape[1]:,}")
+
+    with st.expander("Column profile"):
+        prof = profile(df)
+        for col, meta in prof["columns"].items():
+            st.markdown(f"**{col}** — `{meta['kind']}`")
 
 # ---------- Main: overview ----------
 st.subheader("Dataset overview")

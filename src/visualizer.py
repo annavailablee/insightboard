@@ -36,23 +36,23 @@ def visualize(request, outcome):
         return {"status": "skipped", "reason": "The result is empty."}
 
     # ---------- Chart selection ----------
-    if _is_time_like(group_by):
+    if request.get("time_bucket") or _is_time_like(group_by):
         chart_type = "line"
         reason = (
-            f"'{group_by}' looks like a time column, so a line chart shows "
-            f"the trend more clearly than bars."
+            f"'{group_by}' is being viewed over time, so a line chart "
+            f"shows the trend clearly."
         )
     elif len(result_df) > HORIZONTAL_BAR_THRESHOLD:
         chart_type = "horizontal_bar"
         reason = (
-            f"There are {len(result_df)} categories — bars going sideways keep "
-            f"the labels readable."
+            f"There are {len(result_df)} categories — bars going sideways "
+            f"keep the labels readable."
         )
     else:
         chart_type = "bar"
         reason = (
-            f"'{group_by}' is categorical, so a bar chart makes the comparison "
-            f"across groups easy to read."
+            f"'{group_by}' is categorical, so a bar chart makes the "
+            f"comparison across groups easy to read."
         )
 
     # ---------- Build the figure ----------
