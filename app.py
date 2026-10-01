@@ -1,5 +1,7 @@
 import streamlit as st
 import pandas as pd
+from src.interpreter import interpret
+from src.executor import execute
 
 st.set_page_config(
     page_title="InsightBoard",
@@ -92,3 +94,34 @@ with tab_stats:
         st.info("No numeric columns detected in this dataset.")
     else:
         st.dataframe(numeric_df.describe().T)
+
+# ---------- Main: ask a question ----------
+st.subheader("Ask a question")
+st.caption(
+    "Try: 'Which region had the highest average revenue?' "
+    "or 'Top 5 products by revenue'."
+)
+
+question = st.text_input(
+    "Your question",
+    placeholder="e.g. Show revenue by category",
+)
+
+if question:
+    interp = interpret(question, df)
+
+    if interp["status"] == "error":
+        st.error(interp["message"])
+    else:
+        request = interp["request"]
+
+        with st.expander("Interpreted as", expanded=False):
+            st.json(request)
+
+        outcome = execute(request, df)
+
+        if outcome["status"] == "error":
+            st.error(outcome["message"])
+        else:
+            st.markdown("**Result**")
+            st.dataframe(outcome["result"], hide_index=True)
