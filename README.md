@@ -9,6 +9,8 @@
 [![Plotly](https://img.shields.io/badge/PLOTLY-6D765B?style=for-the-badge&logo=plotly&logoColor=FEFAE0)](https://plotly.com)
 [![Gemini](https://img.shields.io/badge/GEMINI-314128?style=for-the-badge&logo=googlegemini&logoColor=FEFAE0)](https://aistudio.google.com)
 
+**Live demo:** https://insightboard-annavailablee.streamlit.app
+
 [![License](https://img.shields.io/badge/LICENSE-MIT-A3B2A1?style=for-the-badge)](LICENSE)
 [![Interpreters](https://img.shields.io/badge/INTERPRETERS-2-A3B2A1?style=for-the-badge)](#architecture)
 [![Code Execution](https://img.shields.io/badge/LLM_CODE_EXECUTION-NEVER-B44B4B?style=for-the-badge)](#design-decisions)
