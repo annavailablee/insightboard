@@ -1,10 +1,12 @@
 import streamlit as st
 import pandas as pd
+import json as _json
 from src.interpreter import interpret
 from src.executor import execute
 from src.explainer import explain
 from src.visualizer import visualize
 from src.schema import profile
+from src.llm_interpreter import interpret as llm_interpret
 
 st.set_page_config(
     page_title="InsightBoard",
@@ -63,6 +65,20 @@ with st.sidebar:
         prof = profile(df)
         for col, meta in prof["columns"].items():
             st.markdown(f"**{col}** — `{meta['kind']}`")
+        st.divider()
+    use_llm = st.toggle(
+        "Use LLM interpreter",
+        value=False,
+        help="Requires GEMINI_API_KEY in .streamlit/secrets.toml",
+    )
+    profile_bytes = _json.dumps(profile(df), indent=2, default=str).encode("utf-8")
+    st.download_button(
+        "Download column profile (JSON)",
+        data=profile_bytes,
+        file_name="insightboard_profile.json",
+        mime="application/json",
+        key="dl_profile",
+    )
 
 # ---------- Main: overview ----------
 st.subheader("Dataset overview")
@@ -110,31 +126,98 @@ st.caption(
     "or 'Top 5 products by revenue'."
 )
 
+if "history" not in st.session_state:
+    st.session_state.history = []
+
+if st.sidebar.button("Clear conversation"):
+    st.session_state.history = []
+    st.rerun()
+
 question = st.text_input(
     "Your question",
     placeholder="e.g. Show revenue by category",
+    key="question_input",
 )
 
 if question:
-    interp = interpret(question, df)
+    # Avoid re-running the same question twice on rerun
+    already_asked = (
+        st.session_state.history
+        and st.session_state.history[-1]["question"] == question
+    )
 
+    if not already_asked:
+        if use_llm:
+            api_key = st.secrets.get("GEMINI_API_KEY", "")
+            if not api_key:
+                st.error(
+                    "GEMINI_API_KEY is missing from .streamlit/secrets.toml. "
+                    "Falling back to rule-based interpreter."
+                )
+                interp = interpret(question, df)
+            else:
+                with st.spinner("Thinking…"):
+                    interp = llm_interpret(question, df, api_key)
+        else:
+            interp = interpret(question, df)
+
+        entry = {"question": question, "interp": interp}
+
+        if interp["status"] == "ok":
+            request = interp["request"]
+            outcome = execute(request, df)
+            entry["request"] = request
+            entry["outcome"] = outcome
+
+            if outcome["status"] == "ok":
+                entry["explanation"] = explain(request, outcome)
+                entry["viz"] = visualize(request, outcome)
+
+        st.session_state.history.append(entry)
+
+# ---------- Render history ----------
+for i, entry in enumerate(st.session_state.history):
+    st.divider()
+    st.markdown(f"**Q:** {entry['question']}")
+
+    interp = entry["interp"]
     if interp["status"] == "error":
         st.error(interp["message"])
-    else:
-        request = interp["request"]
+        continue
 
-        with st.expander("Interpreted as", expanded=False):
-            st.json(request)
+    request = entry["request"]
+    with st.expander("Interpreted as", expanded=False):
+        st.json(request)
 
-        outcome = execute(request, df)
+    outcome = entry["outcome"]
+    if outcome["status"] == "error":
+        st.error(outcome["message"])
+        continue
 
-        if outcome["status"] == "error":
-            st.error(outcome["message"])
-        else:
-            st.dataframe(outcome["result"], hide_index=True)
+    explanation = entry["explanation"]
+    st.markdown("**Result**")
+    st.markdown(explanation["result"])
 
-            viz = visualize(request, outcome)
-            if viz["status"] == "ok":
-                st.markdown("**Visualization**")
-                st.plotly_chart(viz["figure"], use_container_width=True)
-                st.caption(f"Chart choice: {viz['reason']}")
+    st.markdown("**Why**")
+    st.markdown(explanation["why"])
+
+    st.dataframe(outcome["result"], hide_index=True)
+
+    # Download result as CSV
+    csv_bytes = outcome["result"].to_csv(index=False).encode("utf-8")
+    st.download_button(
+        "Download result as CSV",
+        data=csv_bytes,
+        file_name=f"insightboard_result_{i + 1}.csv",
+        mime="text/csv",
+        key=f"dl_csv_{i}",
+    )
+
+    viz = entry.get("viz")
+    if viz and viz.get("status") == "ok":
+        st.markdown("**Visualization**")
+        st.plotly_chart(viz["figure"], use_container_width=True)
+        st.caption(
+            f"Chart choice: {viz['reason']} "
+            f"(Use the camera icon on the chart to save as PNG.)"
+        )
