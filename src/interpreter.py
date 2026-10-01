@@ -93,13 +93,21 @@ def interpret(question, df):
 
     # --- 5. Validation before returning ---
     if group_by is None:
-        return {
-            "status": "error",
-            "message": (
+        # Try to name the specific word the user asked to group by
+        m = re.search(r"\bby\s+([a-zA-Z_][a-zA-Z0-9_]*)\b", q)
+        if m:
+            requested = m.group(1)
+            message = (
+                f"There's no column called '{requested}' in this dataset. "
+                f"Available columns: {', '.join(all_cols)}."
+            )
+        else:
+            message = (
                 "I couldn't figure out which column to group by. "
                 f"Available columns: {', '.join(all_cols)}."
-            ),
-        }
+            )
+        return {"status": "error", "message": message}
+    
     if aggregation != "count" and metric is None:
         return {
             "status": "error",

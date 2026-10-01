@@ -3,6 +3,7 @@ import pandas as pd
 from src.interpreter import interpret
 from src.executor import execute
 from src.explainer import explain
+from src.visualizer import visualize
 
 st.set_page_config(
     page_title="InsightBoard",
@@ -124,12 +125,10 @@ if question:
         if outcome["status"] == "error":
             st.error(outcome["message"])
         else:
-            explanation = explain(request, outcome)
-
-            st.markdown("**Result**")
-            st.markdown(explanation["result"])
-
-            st.markdown("**Why**")
-            st.markdown(explanation["why"])
-
             st.dataframe(outcome["result"], hide_index=True)
+
+            viz = visualize(request, outcome)
+            if viz["status"] == "ok":
+                st.markdown("**Visualization**")
+                st.plotly_chart(viz["figure"], use_container_width=True)
+                st.caption(f"Chart choice: {viz['reason']}")
