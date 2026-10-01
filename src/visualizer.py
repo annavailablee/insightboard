@@ -74,6 +74,7 @@ def visualize(request, outcome):
             orientation="h",
             labels={group_by: group_by, value_col: y_label},
         )
+        warm_sequence = ["#7E0B0B", "#6E1C1C", "#6E2A2A", "#E9C9B7", "#8B3A3A"]
         fig.update_layout(yaxis=dict(autorange="reversed"))
     else:
         fig = px.bar(
@@ -82,12 +83,24 @@ def visualize(request, outcome):
             y=value_col,
             labels={group_by: group_by, value_col: y_label},
         )
+    sage_sequence = ["#6D765B", "#6D765B", "#A3B2A1", "#314128", "#B2C2B2"]
 
     fig.update_layout(
-        margin=dict(l=10, r=10, t=40, b=10),
-        height=400,
+        margin=dict(l=10, r=10, t=20, b=10),
+        height=380,
         showlegend=False,
+        colorway=sage_sequence,
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        font=dict(family="system-ui, -apple-system, sans-serif",
+                  size=13, color="#314128"),
+        xaxis=dict(gridcolor="#B2C2B2", linecolor="#A3B2A1",
+                   zerolinecolor="#A3B2A1"),
+        yaxis=dict(gridcolor="#B2C2B2", linecolor="#A3B2A1",
+                   zerolinecolor="#A3B2A1"),
     )
+    fig.update_traces(marker_line_width=0)
+
 
     return {
         "status": "ok",

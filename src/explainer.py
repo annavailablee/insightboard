@@ -3,6 +3,7 @@ Turns (structured_request, executor_outcome) into a plain-English Result
 and Why. Deterministic. Never looks at the original user question.
 """
 
+import html
 
 def _format_number(value):
     """Human-friendly number formatting."""
@@ -58,16 +59,15 @@ def explain(request, outcome):
     # ---------- Why ----------
     if agg == "count":
         why = (
-            f"Rows were grouped by **{group_by}** and counted. "
+            f"Rows were grouped by <strong>{group_by}</strong> and counted. "
             f"The result shows how many rows fall into each group."
         )
     else:
         why = (
-            f"**{metric}** was aggregated by **{agg_phrase}** for each unique "
-            f"value of **{group_by}**. The result shows one row per group."
+            f"<strong>{metric}</strong> was aggregated by "
+            f"<strong>{agg_phrase}</strong> for each unique "
+            f"value of <strong>{group_by}</strong>. The result shows one row per group."
         )
-    if limit is not None:
-        why += f" Results were sorted by {agg_phrase} {metric or 'count'} and limited to the top {limit}."
 
     # ---------- Result ----------
     top_row = result_df.iloc[0]
@@ -81,19 +81,19 @@ def explain(request, outcome):
         if len(ties) > 1:
             joined = ", ".join(str(t) for t in ties[:-1]) + f" and {ties[-1]}"
             result = (
-                f"{joined} tied for the highest {agg_phrase} "
+                f"<strong>{html.escape(str(top_group))}</strong> tied for the highest {agg_phrase} "
                 f"{metric or 'count'} at {_format_number(top_value)}."
             )
         else:
             result = (
-                f"**{top_group}** had the highest {agg_phrase} "
+                f"<strong>{html.escape(str(top_group))}</strong> had the highest {agg_phrase} "
                 f"{metric or 'count'} at {_format_number(top_value)}."
             )
 
     elif limit is not None and limit > 1:
         result = (
             f"Top {limit} values of {group_by} by {agg_phrase} "
-            f"{metric or 'count'}: **{top_group}** leads "
+            f"{metric or 'count'}: <strong>{html.escape(str(top_group))}</strong> leads "
             f"at {_format_number(top_value)}."
         )
 
@@ -102,7 +102,8 @@ def explain(request, outcome):
         result = (
             f"Breakdown of {agg_phrase} {metric or 'count'} by {group_by} "
             f"across {len(result_df)} group(s). "
-            f"Highest: **{top_group}** at {_format_number(top_value)}."
+            f"Highest: <strong>{html.escape(str(top_group))}</strong> at "
+            f"{_format_number(top_value)}."
         )
 
     return {"result": result, "why": why}

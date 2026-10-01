@@ -6,6 +6,7 @@ from src.executor import execute
 from src.explainer import explain
 from src.visualizer import visualize
 from src.schema import profile
+from src.suggestions import suggest
 from src.llm_interpreter import interpret as llm_interpret
 
 st.set_page_config(
@@ -14,12 +15,22 @@ st.set_page_config(
     layout="wide",
 )
 
-st.title("📊 InsightBoard")
-st.caption("Ask questions about your CSV in plain English.")
+from src.style import inject as inject_style
+inject_style()
+
+st.markdown(
+    """
+    <div class="ib-hero">
+      <div class="ib-hero-title"><span class="ib-hero-dot"></span>InsightBoard</div>
+    </div>
+    <p class="ib-hero-sub">Ask questions about your CSV in plain English.</p>
+    """,
+    unsafe_allow_html=True,
+)
 
 # ---------- Sidebar: upload ----------
 with st.sidebar:
-    st.header("Dataset")
+    st.markdown("## Dataset")
     uploaded_file = st.file_uploader(
         "Upload a CSV file",
         type=["csv"],
@@ -27,7 +38,18 @@ with st.sidebar:
     )
 
 if uploaded_file is None:
-    st.info("👈 Upload a CSV file from the sidebar to get started.")
+    st.markdown(
+        """
+        <div class="ib-empty">
+            <div class="ib-empty-icon">📄</div>
+            <div class="ib-empty-title">Upload a CSV to get started</div>
+            <div class="ib-empty-sub">
+                Use the sidebar on the left. Your data stays in your browser session.
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
     st.stop()
 
 # ---------- Guardrails before loading ----------
@@ -57,9 +79,10 @@ if df.empty:
 
 # ---------- Sidebar: dataset info ----------
 with st.sidebar:
-    st.success(f"Loaded: {uploaded_file.name}")
-    st.metric("Rows", f"{df.shape[0]:,}")
-    st.metric("Columns", f"{df.shape[1]:,}")
+    st.markdown(f"**{uploaded_file.name}**")
+    c1, c2 = st.columns(2)
+    c1.metric("Rows", f"{df.shape[0]:,}")
+    c2.metric("Columns", f"{df.shape[1]:,}")
 
     with st.expander("Column profile"):
         prof = profile(df)
@@ -79,6 +102,11 @@ with st.sidebar:
         mime="application/json",
         key="dl_profile",
     )
+    st.divider()
+    st.markdown("**Try asking**")
+    prof = profile(df)
+    for s in suggest(df, prof):
+        st.code(s, language=None)
 
 # ---------- Main: overview ----------
 st.subheader("Dataset overview")
@@ -177,47 +205,52 @@ if question:
 
 # ---------- Render history ----------
 for i, entry in enumerate(st.session_state.history):
-    st.divider()
-    st.markdown(f"**Q:** {entry['question']}")
-
-    interp = entry["interp"]
-    if interp["status"] == "error":
-        st.error(interp["message"])
-        continue
-
-    request = entry["request"]
-    with st.expander("Interpreted as", expanded=False):
-        st.json(request)
-
-    outcome = entry["outcome"]
-    if outcome["status"] == "error":
-        st.error(outcome["message"])
-        continue
-
-    explanation = entry["explanation"]
-    st.markdown("**Result**")
-    st.markdown(explanation["result"])
-
-    st.markdown("**Why**")
-    st.markdown(explanation["why"])
-
-    st.dataframe(outcome["result"], hide_index=True)
-
-    # Download result as CSV
-    csv_bytes = outcome["result"].to_csv(index=False).encode("utf-8")
-    st.download_button(
-        "Download result as CSV",
-        data=csv_bytes,
-        file_name=f"insightboard_result_{i + 1}.csv",
-        mime="text/csv",
-        key=f"dl_csv_{i}",
-    )
-
-    viz = entry.get("viz")
-    if viz and viz.get("status") == "ok":
-        st.markdown("**Visualization**")
-        st.plotly_chart(viz["figure"], use_container_width=True)
-        st.caption(
-            f"Chart choice: {viz['reason']} "
-            f"(Use the camera icon on the chart to save as PNG.)"
+    with st.container(border=True):
+        st.markdown(
+            f'<p class="ib-q">{entry["question"]}</p>',
+            unsafe_allow_html=True,
         )
+
+        interp = entry["interp"]
+        if interp["status"] == "error":
+            st.error(interp["message"])
+            continue
+
+        request = entry["request"]
+        with st.expander("Interpreted as", expanded=False):
+            st.json(request)
+
+        outcome = entry["outcome"]
+        if outcome["status"] == "error":
+            st.error(outcome["message"])
+            continue
+
+        explanation = entry["explanation"]
+        st.markdown('<p class="ib-label">Result</p>', unsafe_allow_html=True)
+        st.markdown(
+            f'<p class="ib-result">{explanation["result"]}</p>',
+            unsafe_allow_html=True,
+        )
+        st.markdown('<p class="ib-label">Why</p>', unsafe_allow_html=True)
+        st.markdown(
+            f'<p class="ib-why">{explanation["why"]}</p>',
+            unsafe_allow_html=True,
+        )
+
+        st.dataframe(outcome["result"], hide_index=True, use_container_width=True)
+
+        csv_bytes = outcome["result"].to_csv(index=False).encode("utf-8")
+        st.download_button(
+            "Download result as CSV",
+            data=csv_bytes,
+            file_name=f"insightboard_result_{i + 1}.csv",
+            mime="text/csv",
+            key=f"dl_csv_{i}",
+        )
+
+        viz = entry.get("viz")
+        if viz and viz.get("status") == "ok":
+            st.markdown('<p class="ib-label">Visualization</p>',
+                        unsafe_allow_html=True)
+            st.plotly_chart(viz["figure"], use_container_width=True)
+            st.caption(viz["reason"])
