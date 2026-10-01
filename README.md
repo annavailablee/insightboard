@@ -2,7 +2,7 @@
 
 **Ask questions about your CSV in plain English.**
 
-
+[![Live Demo](https://img.shields.io/badge/LIVE_DEMO-87AE73?style=for-the-badge&logo=streamlit&logoColor=FEFAE0)](https://insightboard-annavailablee.streamlit.app)
 [![Python](https://img.shields.io/badge/PYTHON-314128?style=for-the-badge&logo=python&logoColor=FEFAE0)](https://python.org)
 [![Streamlit](https://img.shields.io/badge/STREAMLIT-6D765B?style=for-the-badge&logo=streamlit&logoColor=FEFAE0)](https://streamlit.io)
 [![Pandas](https://img.shields.io/badge/PANDAS-87AE73?style=for-the-badge&logo=pandas&logoColor=FEFAE0)](https://pandas.pydata.org)
